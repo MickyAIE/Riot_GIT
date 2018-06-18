@@ -17,7 +17,6 @@ namespace Riot
         Vector2 positon = Vector2.Zero;
 
         #region Sprites / Textures / AnimatedTextures
-        //test
 
         Texture2D playerTexture;
         Sprite sprite = new Sprite();
