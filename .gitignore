@@ -8,6 +8,10 @@ Desktop.ini
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
+bin/
+obj/
+.vs/
+Riot/obj/
 
 # Windows Installer files
 *.cab
@@ -21,3 +25,12 @@ $RECYCLE.BIN/
 # =========================
 # Operating System Files
 # =========================
+*.suo
+Riot/obj/x86/Debug/Riot.pdb
+Riot/obj/x86/Debug/Riot.pdb
+*.cache
+Riot/obj/x86/Debug/Riot.csproj.FileListAbsolute.txt
+*.exe
+Riot/bin/Windows/x86/Debug/Riot.pdb
+*.ide
+.vs/Riot/v15/.suo
