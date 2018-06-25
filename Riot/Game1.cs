@@ -84,6 +84,19 @@ namespace Riot
 
         #region Methods
 
+        
+        public int Score
+        {
+            get
+            {
+                return score;
+            }
+            set
+            {
+                score += value;
+            }
+        }
+
         public int ScreenWidth
         {
             get

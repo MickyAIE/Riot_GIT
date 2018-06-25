@@ -100,3 +100,4 @@ D:\AIE\2018\GPF Cert II\Riot\Riot_GIT\Riot\obj\x86\Debug\Riot.pdb
 D:\AIE\2018\GPF Cert II\Riot\Riot_GIT\Riot\bin\Windows\x86\Debug\Content\Arial.xnb
 D:\AIE\2018\GPF Cert II\Riot\Riot_GIT\Riot\bin\Windows\x86\Debug\Content\Heart.xnb
 D:\AIE\2018\GPF Cert II\Riot\Riot_GIT\Riot\bin\Windows\x86\Debug\Content\HeartMissing.xnb
+D:\AIE\2018\GPF Cert II\Riot\Riot_GIT\Riot\bin\Windows\x86\Debug\Content\Hit_Hurt5.xnb

@@ -15,6 +15,14 @@ namespace Riot
 
         Vector2 velocity = Vector2.Zero;
         Vector2 positon = Vector2.Zero;
+        float rotation = 0f; // In Radians
+
+        #region Content
+
+        SoundEffect swordSwingSound = null;
+        SoundEffectInstance swordSwingInstance = null;
+
+        #endregion
 
         #region Sprites / Textures / AnimatedTextures
 
@@ -29,6 +37,8 @@ namespace Riot
 
         #endregion
 
+        #region Methods
+
         public Vector2 Velocity
         {
             get { return velocity; }
@@ -38,6 +48,7 @@ namespace Riot
         {
             get { return sprite.Bounds; }
         }
+
         public Vector2 Position
         {
             get
@@ -49,6 +60,10 @@ namespace Riot
                 sprite.position = value;
             }
         }
+
+        #endregion
+
+        #region Custom Functions
 
         BoundingBox CreateBoundingBox(float PosX, float PosY, float Width, float Height, float Rotation)
         {
@@ -69,6 +84,22 @@ namespace Riot
 
             return new BoundingBox(newMin, newMax);
         }
+
+        
+        Vector2 FowardDirection(float rotationDirection) // Requires float in radians, Local Direction
+        {
+            Vector2 forwardDirection = Vector2.Zero;
+            float rotation = rotationDirection;
+            //rotation = MathHelper.ToDegrees(rotation);
+            Vector2 direction = new Vector2( (float)Math.Cos(rotation), (float)Math.Sin(rotation) );
+            direction.Normalize();
+
+            forwardDirection = direction;
+
+            return forwardDirection;
+        }
+        
+        #endregion
 
         public Player(Game1 game)
         {
@@ -92,6 +123,9 @@ namespace Riot
             swordSprite.Add(animationSword, swordTexture.Width / 2, swordTexture.Height / 2);
             swordSprite.Pause();
 
+            swordSwingSound = content.Load<SoundEffect>("Hit_Hurt5");
+            swordSwingInstance = swordSwingSound.CreateInstance();
+
             swordBoundingBox = CreateBoundingBox(swordSprite.position.X, swordSprite.position.Y, swordTexture.Width/2, swordTexture.Height, animationSword.Rotation);
         }
 
@@ -104,19 +138,26 @@ namespace Riot
             SwordLogic(deltaTime);
             CollisionDetection();
             swordBoundingBox = CreateBoundingBox(swordSprite.position.X, swordSprite.position.Y, swordTexture.Width/2, swordTexture.Height, animationSword.Rotation);
+            //Console.WriteLine(FowardDirection(rotation));
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            sprite.Draw(spriteBatch);
+            //sprite.Draw(spriteBatch);
+
+            spriteBatch.Draw(playerTexture, position: Position, rotation: rotation);
+            spriteBatch.DrawLine(Position, (Position + (FowardDirection(rotation + MathHelper.ToRadians(270)) * 10)), Color.Yellow, 1);
+            spriteBatch.DrawLine(Position, (Position + (FowardDirection(rotation) * 10)), Color.Blue, 1);
+            spriteBatch.DrawLine(Position, (Position + (FowardDirection(rotation + MathHelper.ToRadians(180)) * 10)), Color.Red, 1);
+            spriteBatch.DrawLine(Position, (Position + (FowardDirection(rotation + MathHelper.ToRadians(90)) * 10)), Color.Green, 1);
             if (timerDelay >= 0)
             {
                 swordSprite.Draw(spriteBatch);
                 //spriteBatch.DrawRectangle(swordSprite.Bounds, Color.Red, 1);
-                spriteBatch.DrawLine(swordBoundingBox.Min.X, swordBoundingBox.Min.Y, swordBoundingBox.Min.X, swordBoundingBox.Max.Y, Color.Red, 1);
-                spriteBatch.DrawLine(swordBoundingBox.Min.X, swordBoundingBox.Min.Y, swordBoundingBox.Max.X, swordBoundingBox.Min.Y, Color.Green, 1);
-                spriteBatch.DrawLine(swordBoundingBox.Max.X, swordBoundingBox.Min.Y, swordBoundingBox.Max.X, swordBoundingBox.Max.Y, Color.Blue, 1);
-                spriteBatch.DrawLine(swordBoundingBox.Max.X, swordBoundingBox.Max.Y, swordBoundingBox.Min.X, swordBoundingBox.Max.Y, Color.Yellow, 1);
+                //spriteBatch.DrawLine(swordBoundingBox.Min.X, swordBoundingBox.Min.Y, swordBoundingBox.Min.X, swordBoundingBox.Max.Y, Color.Red, 1);
+                //spriteBatch.DrawLine(swordBoundingBox.Min.X, swordBoundingBox.Min.Y, swordBoundingBox.Max.X, swordBoundingBox.Min.Y, Color.Green, 1);
+                //spriteBatch.DrawLine(swordBoundingBox.Max.X, swordBoundingBox.Min.Y, swordBoundingBox.Max.X, swordBoundingBox.Max.Y, Color.Blue, 1);
+                //spriteBatch.DrawLine(swordBoundingBox.Max.X, swordBoundingBox.Max.Y, swordBoundingBox.Min.X, swordBoundingBox.Max.Y, Color.Yellow, 1);
             }
         }
 
@@ -170,6 +211,47 @@ namespace Riot
             }
         }
 
+        bool KeyRotateLeft()
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.Q) || GamePad.GetState(0).IsButtonDown(Buttons.RightThumbstickLeft))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        bool KeyRotateRight()
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.E) || GamePad.GetState(0).IsButtonDown(Buttons.RightThumbstickRight))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        bool ActionOne()
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.Space) || Mouse.GetState().LeftButton == ButtonState.Pressed || GamePad.GetState(0).IsButtonDown(Buttons.B))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        void ReactionOne()
+        {
+            GamePad.SetVibration(0,1,1);
+        }
+
         #endregion
 
         #region InputVariables
@@ -189,13 +271,24 @@ namespace Riot
             Vector2 acceleration = new Vector2(0, 0);
 
             timerDelay -= deltaTime;
-            if (Keyboard.GetState().IsKeyDown(Keys.Space))
+            if (ActionOne() == true)
             {
                 if (timerDelay <= 0)
                 {
                     SwingSword();
+                    ReactionOne();
+                    swordSwingInstance.Play();
                     timerDelay = attackDelay;
                 }
+            }
+
+            if (KeyRotateLeft() == true)
+            {
+                rotation -= Deg2Rad(5);
+            }
+            else if (KeyRotateRight() == true)
+            {
+                rotation += Deg2Rad(5);
             }
 
             if (KeyLeft() == true)
@@ -398,7 +491,6 @@ namespace Riot
                 default:
                     break;
             }
-            
         }
 
         void SwordLogic(float deltaTime)

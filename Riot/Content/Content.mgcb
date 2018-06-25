@@ -98,3 +98,9 @@
 /processorParam:TextureFormat=Color
 /build:HeartMissing.png
 
+#begin Hit_Hurt5.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Hit_Hurt5.wav
+
