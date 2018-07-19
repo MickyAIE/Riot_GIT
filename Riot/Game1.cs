@@ -6,6 +6,7 @@ using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Graphics;
 using MonoGame.Extended.ViewportAdapters;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Riot
@@ -17,21 +18,21 @@ namespace Riot
     {
         #region TileSettings
 
-        public static int tile = 16;
+        public static int tile = 256;
         // abitrary choice for 1m (1 tile = 1 meter)
         public static float meter = tile;
         // very exaggerated gravity (6x)
         //public static float gravity = meter * 9.8f * 6.0f;
         // max vertical speed (10 tiles/sec horizontal, 15 tiles/sec vertical)
-        public static Vector2 maxVelocity = new Vector2(meter * 5f, meter * 4f);
+        public static Vector2 maxVelocity = new Vector2(meter * 2f, meter * 2f);
         // horizontal acceleration -  take 1/2 second to reach max velocity
-        public static float accelerationX = maxVelocity.X * 2;
+        public static float accelerationX = maxVelocity.X * 6;
         // horizontal friction - take 1/6 second to stop from max velocity
-        public static float frictionX = maxVelocity.X * 6f;
-        // horizontal acceleration -  take 1/2 second to reach max velocity
-        public static float accelerationY = maxVelocity.Y * 2;
-        // horizontal friction - take 1/6 second to stop from max velocity
-        public static float frictionY = maxVelocity.Y * 6f;
+        public static float frictionX = maxVelocity.X * 3f;
+        // Vertical acceleration -  take 1/2 second to reach max velocity
+        public static float accelerationY = maxVelocity.Y * 6;
+        // Vertical friction - take 1/6 second to stop from max velocity
+        public static float frictionY = maxVelocity.Y * 3f;
 
         #endregion
 
@@ -47,28 +48,24 @@ namespace Riot
         #region Characters/Items
 
         Player player = null;
-        //Zombie zombie = null;
-
-        List<Zombie> zombies = new List<Zombie>();
+        List<Enemy> enemies = new List<Enemy>();
+        public List<Bullet> Bullets = new List<Bullet>();
 
         #endregion
 
         #region HUD
 
-        SpriteFont arialFont;
-        int score = 0;
-        int lives = 3;
+        SpriteFont arial;
 
-        Texture2D heartImage = null;
+        int Shield = 100;
+        int Health = 100;
+        int Score = 0;
 
         #endregion
 
         #region GameWorld
 
-        Camera2D camera = null;
-        TiledMap map = null;
-        TiledMapRenderer mapRenderer = null;
-        TiledMapTileLayer collisionLayer;
+        public Camera2D camera = null;
 
         #endregion
 
@@ -83,19 +80,6 @@ namespace Riot
         GameState GetGameState = GameState.Playing_State;
 
         #region Methods
-
-        
-        public int Score
-        {
-            get
-            {
-                return score;
-            }
-            set
-            {
-                score += value;
-            }
-        }
 
         public int ScreenWidth
         {
@@ -112,6 +96,8 @@ namespace Riot
                 return graphics.GraphicsDevice.Viewport.Height;
             }
         }
+
+        public float DeltaTime;
 
         #endregion
 
@@ -132,7 +118,7 @@ namespace Riot
             // TODO: Add your initialization logic here
 
             player = new Player(this);
-            player.Position = new Vector2(96, 480);
+            
 
             //zombie = new Zombie(this);
             //zombie.Position = new Vector2(200, 480);
@@ -155,44 +141,15 @@ namespace Riot
             // TODO: use this.Content to load your game content here
 
             player.Load(Content);
-            //zombie.Load(Content);
-            //zombie.GetPlayer = player;
+            player.Position = new Vector2(ScreenWidth / 2 - player.playerTexture.Width, ScreenHeight + 100);
 
-            arialFont = Content.Load<SpriteFont>("Arial");
-            heartImage = Content.Load<Texture2D>("Heart");
+            arial = Content.Load<SpriteFont>("arial");
 
             BoxingViewportAdapter viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, ScreenWidth, ScreenHeight);
 
             camera = new Camera2D(viewportAdapter);
-            camera.Position = new Vector2(0, ScreenHeight);
-
-            map = Content.Load<TiledMap>("Level1");
-            mapRenderer = new TiledMapRenderer(GraphicsDevice);
-
-            //ZombieSpawns
-
-            foreach (TiledMapObjectLayer layer in map.ObjectLayers)
-            {
-                if (layer.Name == "ZombieSpawns")
-                {
-                    foreach (TiledMapObject obj in layer.Objects)
-                    {
-                        Zombie zombie = new Zombie(this);
-                        zombie.Load(Content);
-                        zombie.GetPlayer = player;
-                        zombie.Position = new Vector2(obj.Position.X,obj.Position.Y);
-                        zombies.Add(zombie);
-                    }
-                }
-            }
-
-            foreach (TiledMapTileLayer layer in map.TileLayers)
-            {
-                if (layer.Name == "Collision")
-                {
-                    collisionLayer = layer;
-                }
-            }
+            camera.Position = new Vector2(0, 0);
+            camera.Zoom = 0.5f;
 
             MasterCheck();
         }
@@ -210,26 +167,6 @@ namespace Riot
             if (player == null)
             {
                 throw new System.ArgumentException("Player is null, please check code and declare!", "player");
-            }
-            if (arialFont == null)
-            {
-                throw new System.ArgumentException("ArialFont is null, please check code and declare!", "arialFont");
-            }
-            if (heartImage == null)
-            {
-                throw new System.ArgumentException("HeartImage is null, please check code and declare!", "heartImage");
-            }
-            if (map == null)
-            {
-                throw new System.ArgumentException("Map is null, please check code and declare!", "map");
-            }
-            if (mapRenderer == null)
-            {
-                throw new System.ArgumentException("MapRenderer is null, please check code and declare!", "mapRenderer");
-            }
-            if (collisionLayer == null)
-            {
-                throw new System.ArgumentException("CollisionLayer is null, please check code and declare!", "collisionLayer");
             }
         }
 
@@ -259,6 +196,8 @@ namespace Riot
                 Exit();
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            DeltaTime = deltaTime;
+
 
             // TODO: Add your update logic here
 
@@ -300,15 +239,21 @@ namespace Riot
 
                     player.Update(deltaTime);
 
-                    foreach (Zombie zombie in zombies)
+                    SpawnWaves();
+
+                    foreach (Enemy enemy in enemies)
                     {
-                        zombie.Update(deltaTime);
+                        enemy.Update(deltaTime);
                     }
 
-                    camera.Position = player.Position - new Vector2(ScreenWidth / 2, ScreenHeight / 2);
-                    camera.Zoom = 2f;
+                    foreach (Bullet bullet in Bullets)
+                    {
+                        bullet.Update(deltaTime);
+                    }
 
-                    //CheckCollisions();
+                    //camera.Position = player.Position - new Vector2(ScreenWidth / 2, ScreenHeight / 2);
+
+                    CheckCollisions();
 
                     break;
                 case GameState.GameOver_State:
@@ -385,19 +330,17 @@ namespace Riot
 
                     // World Space
                     spriteBatch.Begin(transformMatrix: viewMatrix, samplerState: SamplerState.PointClamp, sortMode: SpriteSortMode.BackToFront);
-                    
-
-                    mapRenderer.Draw(map.GetLayer("bg"), ref viewMatrix, ref projectionMatrix, null, 0);
-                    mapRenderer.Draw(map.GetLayer("bg2"), ref viewMatrix, ref projectionMatrix, null, 0);
-                    mapRenderer.Draw(map.GetLayer("floor"), ref viewMatrix, ref projectionMatrix, null, 0);
-                    mapRenderer.Draw(map.GetLayer("fg"), ref viewMatrix, ref projectionMatrix, null, 0);
 
                     player.Draw(spriteBatch);
-                    spriteBatch.DrawRectangle(player.Bounds, Color.Red, 1);
 
-                    foreach (Zombie zombie in zombies)
+                    foreach (Enemy enemy in enemies)
                     {
-                        zombie.Draw(spriteBatch);
+                        enemy.Draw(spriteBatch);
+                    }
+
+                    foreach (Bullet bullet in Bullets)
+                    {
+                        bullet.Draw(spriteBatch);
                     }
 
                     spriteBatch.End();
@@ -405,7 +348,8 @@ namespace Riot
                     //Screen Space
                     spriteBatch.Begin();
 
-
+                    spriteBatch.DrawString(arial,Shield.ToString(),new Vector2(0,0),Color.Aqua);
+                    spriteBatch.DrawString(arial, Health.ToString(), new Vector2(0, 15), Color.Red);
 
                     spriteBatch.End();
 
@@ -433,52 +377,96 @@ namespace Riot
             }
 
             spriteBatch.GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
+
             base.Draw(gameTime);
         }
 
-        public int PixelToTile(float pixelCoord)
+        public int hazardCount = 3;
+        public float spawnWait = 0.5f;
+        public float startWait = 1.0f;
+        public float waveWait = 20.0f;
+
+        int currentHazards = 0;
+
+        void SpawnWaves()
         {
-            return (int)Math.Floor(pixelCoord / tile);
+            if (startWait <= 0f)
+            {
+                if (spawnWait <= 0f && currentHazards < hazardCount)
+                {
+                    currentHazards++;
+
+                    Random random = new Random();
+                    Vector2 spawnPosition = new Vector2(random.Next((int)camera.BoundingRectangle.Left, (int)camera.BoundingRectangle.Right), camera.BoundingRectangle.Top - 100);
+                    float spawnRotation = MathHelper.ToRadians(180);
+                    Enemy enemy = new Enemy(this);
+                    enemy.Load(Content);
+                    enemy.GetPlayer = player;
+                    enemy.Position = spawnPosition;
+                    enemy.Rotation = spawnRotation;
+                    enemies.Add(enemy);
+                    
+                    spawnWait = 0.5f;
+                }
+                else
+                {
+                    if (currentHazards >= hazardCount)
+                    {
+                        if (waveWait <= 0f)
+                        {
+                            waveWait = 10f;
+                            currentHazards = 0;
+                        }
+                        else
+                        {
+                            waveWait -= DeltaTime;
+                            return;
+                        }
+                    }
+                    spawnWait -= DeltaTime;
+                    return;
+                }
+            }
+            else
+            {
+                startWait -= DeltaTime;
+                return;
+            }
         }
 
-        public int TileToPixel(int tileCoord)
-        {
-            return tile * tileCoord;
-        }
-
-        public int CellAtPixelCoord(Vector2 pixelCoords)
-        {
-            if (pixelCoords.X < 0 || pixelCoords.X > map.WidthInPixels || pixelCoords.Y < 0)
-            {
-                return 1;
-            }
-            if (pixelCoords.Y > map.HeightInPixels)
-            {
-                return 0;
-            }
-            return CellAtTileCoord(PixelToTile(pixelCoords.X), PixelToTile(pixelCoords.Y));
-        }
-
-        public int CellAtTileCoord(int tx, int ty)
-        {
-            if (tx < 0 || tx >= map.Width || ty < 0)
-            {
-                return 1;
-            }
-            if (ty >= map.Height)
-            {
-                return 0;
-            }
-
-            TiledMapTile? tile;
-            collisionLayer.TryGetTile(tx, ty, out tile);
-            return tile.Value.GlobalIdentifier;
-
-        }
 
         private void CheckCollisions()
         {
-            
+            foreach (Bullet bullet in Bullets)
+            {
+                foreach (Enemy enemy in enemies)
+                {
+                    if (IsColliding(bullet.Bounds,enemy.Bounds) && bullet.shotFrom == Bullet.ShotFrom.player)
+                    {
+                        Bullets.Remove(bullet);
+                        enemies.Remove(enemy);
+                        return;
+                    }
+
+                    if (IsColliding(bullet.Bounds, player.Bounds) && bullet.shotFrom == Bullet.ShotFrom.enemy)
+                    {
+                        Bullets.Remove(bullet);
+
+                        if (Shield > 0)
+                        {
+                            Shield -= 10;
+                            Shield = MathHelper.Clamp(Shield,0,100);
+                        }
+                        else
+                        {
+                            Health -= 10;
+                            Health = MathHelper.Clamp(Shield, 0, 100);
+                        }
+
+                        return;
+                    }
+                }
+            }
         }
 
         public bool IsColliding(Rectangle rect1, Rectangle rect2)

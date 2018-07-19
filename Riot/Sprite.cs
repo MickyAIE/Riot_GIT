@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Riot
 {
-    class Sprite
+    public class Sprite
     {
         public Vector2 position = Vector2.Zero;
         List<AnimatedTexture> animations = new List<AnimatedTexture>();
