@@ -11,6 +11,7 @@ namespace Riot
 {
     public class Bullet
     {
+        // Changed
         Game1 game = null;
 
         Vector2 positon = Vector2.Zero;
